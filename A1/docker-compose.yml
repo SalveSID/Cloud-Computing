@@ -1,0 +1,24 @@
+services:
+  container1:
+    image: sidsalve/container1
+    container_name: container1
+    ports:
+      - "6000:6000"
+    volumes:
+      - .:/a1files
+    networks:
+      - mynetwork
+
+  container2:
+    image: sidsalve/container2
+    container_name: container2
+    ports:
+      - "7000:7000"
+    volumes:
+      - .:/a1files
+    networks:
+      - mynetwork
+
+networks:
+  mynetwork:
+    name: mynetwork

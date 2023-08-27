@@ -1,0 +1,270 @@
+#SIddhesh_Salve_B00934528_CLoud_Formation
+
+Resources:
+  ReviewBuddyBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: reviewbuddybucket
+
+  ReviewBuddyResultsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: reviewbuddyresultsbucket
+
+  ReviewBuddySNSTopicSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref ReviewBuddySNSTopic
+      Protocol: email
+      Endpoint: 1997siddhesh@gmail.com
+
+  ReviewBuddySNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: reviewbuddy
+
+  ReviewTextractLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Timeout: 30
+      FunctionName: reviewTextractLambda
+      Runtime: nodejs14.x
+      Handler: index.handler
+      Role: "arn:aws:iam::121105066438:role/LabRole"
+      Code:
+        S3Bucket: codebuckett
+        S3Key: Textract Lambda.zip
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN:
+            Ref: "ReviewBuddySNSTopic"
+
+  ReviewBuddyLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Timeout: 30
+      FunctionName: reviewbuddylambda
+      Runtime: nodejs14.x
+      Handler: index.handler
+      Role: "arn:aws:iam::121105066438:role/LabRole"
+      Code:
+        S3Bucket: codebuckett
+        S3Key: Store lambda.zip
+      Environment:
+        Variables:
+          REVIEW_TEXTRACT_LAMBDA_ARN: !GetAtt ReviewTextractLambdaFunction.Arn
+
+  ReviewBuddyRestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: ReviewBuddyAPI
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  ReviewBuddyResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: "ReviewBuddyRestApi"
+      ParentId:
+        Fn::GetAtt: ["ReviewBuddyRestApi", "RootResourceId"]
+      PathPart: "reviewbuddy"
+
+  ReviewBuddyPostMethod:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      RestApiId:
+        Ref: "ReviewBuddyRestApi"
+      ResourceId:
+        Ref: "ReviewBuddyResource"
+      HttpMethod: "POST"
+      AuthorizationType: "NONE"
+      Integration:
+        Type: "AWS"
+        IntegrationHttpMethod: "POST"
+        Uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ReviewBuddyLambdaFunction.Arn}/invocations"
+        PassthroughBehavior: WHEN_NO_MATCH
+        IntegrationResponses:
+          - StatusCode: "200"
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              "application/json": "Empty"
+          - StatusCode: "400"
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              "application/json": '{"message": "Bad Request"}'
+          - StatusCode: "500"
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              "application/json": '{"message": "Internal Server Error"}'
+        Credentials: "arn:aws:iam::121105066438:role/LabRole"
+      MethodResponses:
+        - StatusCode: "200"
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+            method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+            method.response.header.Access-Control-Allow-Origin: "'*'"
+          ResponseModels:
+            "application/json": "Empty"
+        - StatusCode: "400"
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+            method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+            method.response.header.Access-Control-Allow-Origin: "'*'"
+          ResponseModels:
+            "application/json": "Empty"
+        - StatusCode: "500"
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+            method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+            method.response.header.Access-Control-Allow-Origin: "'*'"
+          ResponseModels:
+            "application/json": "Empty"
+
+  ReviewBuddyCorsOptions:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      RestApiId:
+        Ref: "ReviewBuddyRestApi"
+      ResourceId:
+        Ref: "ReviewBuddyResource"
+      HttpMethod: "OPTIONS"
+      AuthorizationType: "NONE"
+      Integration:
+        Type: MOCK
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          "application/json": '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: "200"
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: "{}"
+      MethodResponses:
+        - StatusCode: "200"
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false
+          ResponseModels:
+            application/json: "Empty"
+
+  ReviewBuddy4xxGatewayResponse:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId:
+        Ref: "ReviewBuddyRestApi"
+      ResponseType: DEFAULT_4XX
+      StatusCode: "200"
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+
+  ReviewBuddy5xxGatewayResponse:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId:
+        Ref: "ReviewBuddyRestApi"
+      ResponseType: DEFAULT_5XX
+      StatusCode: "200"
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+
+  ReviewBuddyDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - ReviewBuddyPostMethod
+      - ReviewBuddyCorsOptions
+      - ReviewBuddy4xxGatewayResponse
+      - ReviewBuddy5xxGatewayResponse
+    Properties:
+      RestApiId: !Ref ReviewBuddyRestApi
+
+  ReviewBuddyStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      RestApiId: !Ref ReviewBuddyRestApi
+      DeploymentId: !Ref ReviewBuddyDeployment
+      StageName: prod
+      Description: Production Stage
+
+  FCFrontendApplication:
+    Type: "AWS::ElasticBeanstalk::Application"
+    Properties:
+      Description: "Elastic Beanstalk Application for the Frontend App"
+      ApplicationName: "FileConsolidator"
+
+  FCFrontendAppVersion:
+    Type: "AWS::ElasticBeanstalk::ApplicationVersion"
+    Properties:
+      ApplicationName: !Ref FCFrontendApplication
+      Description: "Application Version of the Frontend App"
+      SourceBundle:
+        S3Bucket: "codebuckett"
+        S3Key: "build.zip"
+
+  FCFrontendAppConfigTemplate:
+    Type: "AWS::ElasticBeanstalk::ConfigurationTemplate"
+    Properties:
+      ApplicationName: !Ref FCFrontendApplication
+      Description: "Configuration Template for the Frontend App"
+      SolutionStackName: "64bit Amazon Linux 2 v5.8.4 running Node.js 16"
+      OptionSettings:
+        - Namespace: "aws:autoscaling:launchconfiguration"
+          OptionName: "InstanceType"
+          Value: "t3.micro,t3.small"
+        - Namespace: "aws:autoscaling:launchconfiguration"
+          OptionName: "EC2KeyName"
+          Value: "vockey"
+        - Namespace: "aws:autoscaling:launchconfiguration"
+          OptionName: "IamInstanceProfile"
+          Value: "LabInstanceProfile"
+        - Namespace: "aws:elasticbeanstalk:environment"
+          OptionName: "ServiceRole"
+          Value: "arn:aws:iam::121105066438:role/LabRole"
+        - Namespace: "aws:elasticbeanstalk:environment"
+          OptionName: "EnvironmentType"
+          Value: "SingleInstance"
+
+  FCFrontendAppEnvironment:
+    Type: "AWS::ElasticBeanstalk::Environment"
+    Properties:
+      ApplicationName: !Ref FCFrontendApplication
+      EnvironmentName: "FileConsolidatorENV"
+      TemplateName: !Ref FCFrontendAppConfigTemplate
+      VersionLabel: !Ref FCFrontendAppVersion
+      OptionSettings:
+        - Namespace: "aws:elasticbeanstalk:application:environment"
+          OptionName: "REACT_APP_REVIEW_BUDDY_API_URL"
+          Value:
+            Fn::Sub: |
+              "https://${ReviewBuddyRestApi}.execute-api.${AWS::Region}.amazonaws.com/prod/reviewbuddy"
+
+Outputs:
+  ReviewBuddyApiUrl:
+    Description: "Review Buddy API URL"
+    Value: !Sub "https://${ReviewBuddyRestApi}.execute-api.${AWS::Region}.amazonaws.com/prod/reviewbuddy"
+  ApplicationURL:
+    Description: "URL of the Elastic Beanstalk Frontend application"
+    Value:
+      Fn::Join:
+        - ""
+        - - "http://"
+          - Fn::GetAtt: [FCFrontendAppEnvironment, EndpointURL]

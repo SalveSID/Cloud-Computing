@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: container-connector
+
+spec:
+  selector:
+    app: c2-k8s
+  ports:
+    - protocol: TCP
+      port: 7000
+      targetPort: 7000

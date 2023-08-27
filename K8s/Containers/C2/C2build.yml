@@ -1,0 +1,31 @@
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    id: BUILD-K8sC2Image
+    args:
+      - "build"
+      - "-t"
+      - "northamerica-northeast2-docker.pkg.dev/csci5409k8sassignment/sidimagefolder/k8simage2:latest"
+      - "."
+  - name: "gcr.io/cloud-builders/docker"
+    id: PUSH-K8sC2Image
+    args:
+      - "push"
+      - "northamerica-northeast2-docker.pkg.dev/csci5409k8sassignment/sidimagefolder/k8simage2:latest"
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: SIDaccessmanager
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        gcloud projects add-iam-policy-binding $PROJECT_ID \
+          --member=serviceAccount:266084040090-compute@developer.gserviceaccount.com \
+          --role roles/iam.securityReviewer
+  - name: "gcr.io/cloud-builders/kubectl"
+    id: RUN-K8sC2Image
+    env:
+      - "CLOUDSDK_CONTAINER_CLUSTER=sidk8scluster1"
+      - "CLOUDSDK_COMPUTE_ZONE=us-central1-b"
+    args:
+      - "apply"
+      - "-f"
+      - "C2deployfile.yml"

@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: sidpod2image
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c2-k8s
+
+  template:
+    metadata:
+      labels:
+        app: c2-k8s
+
+    spec:
+      containers:
+        - name: c2-k8s
+          image: "northamerica-northeast2-docker.pkg.dev/csci5409k8sassignment/sidimagefolder/k8simage2:latest"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 7000
+          volumeMounts:
+            - name: k8s-store
+              mountPath: /sid_PV_dir
+
+      volumes:
+        - name: k8s-store
+          persistentVolumeClaim:
+            claimName: k8s-store
